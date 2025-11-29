@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/ConcertDataModel.dart';
+import '../services/TokenStorage.dart';
 
 class ConcertRepository {
 
@@ -12,10 +13,21 @@ class ConcertRepository {
     List<ConcertDataModel> concerts = [];
 
     try {
+      // Obtener token JWT
+      String? token = await TokenStorage.getToken();
+
+      // Preparar headers con token si existe
+      Map<String, String> headers = {
+        'Accept': 'application/json'
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
 
       var response = await client.get(
         Uri.parse("https://gigmap-api.onrender.com/api/v1/concerts"),
-        headers: {'Accept': 'application/json'},
+        headers: headers,
       );
 
       List result = jsonDecode(response.body);
