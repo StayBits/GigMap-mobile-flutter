@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gigmap_mobile_flutter/views/ConcertList.dart';
 import 'package:gigmap_mobile_flutter/views/LoginView.dart';
 import 'package:gigmap_mobile_flutter/views/RegisterView.dart';
 import 'package:gigmap_mobile_flutter/bloc/auth/AuthBloc.dart';
@@ -14,9 +13,10 @@ class Welcome extends StatelessWidget {
       listener: (context, state) {
         // Si el usuario ya está autenticado, ir directo a ConcertList
         if (state is AuthAuthenticatedState) {
-          Navigator.pushReplacement(
+          Navigator.pushNamedAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const Concertlist()),
+            '/home',
+            (route) => false,
           );
         }
       },

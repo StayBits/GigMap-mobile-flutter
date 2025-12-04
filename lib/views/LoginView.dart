@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gigmap_mobile_flutter/bloc/auth/AuthBloc.dart';
-import 'package:gigmap_mobile_flutter/views/ConcertList.dart';
 import 'package:gigmap_mobile_flutter/views/RegisterView.dart';
 
 class LoginView extends StatefulWidget {
@@ -38,9 +37,10 @@ class _LoginViewState extends State<LoginView> {
         }
 
         if (state is AuthAuthenticatedState) {
-          Navigator.pushReplacement(
+          Navigator.pushNamedAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const Concertlist()),
+            '/home',
+            (route) => false,
           );
         } else if (state is AuthErrorActionState) {
           ScaffoldMessenger.of(context).showSnackBar(

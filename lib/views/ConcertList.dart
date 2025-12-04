@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gigmap_mobile_flutter/views/CreateConcertView.dart';
 import '../bloc/concerts/ConcertsBloc.dart';
-import '../components/GigmapBottomBar.dart';
 import '../models/ConcertDataModel.dart';
 
 class Concertlist extends StatefulWidget {
@@ -33,15 +32,6 @@ class _ConcertlistState extends State<Concertlist> {
       return isoDate;
     }
   }
-  int _bottomIndex = 0;
-
-  final List<IconData> _fabIcons = const [
-    Icons.home,
-    Icons.location_on_outlined,
-    Icons.group_add_outlined,
-    Icons.settings_outlined,
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -81,15 +71,6 @@ class _ConcertlistState extends State<Concertlist> {
             child: Icon(Icons.notifications_none, color: Color(0xFF5C0F1A)),
           ),
         ],
-      ),
-
-      bottomNavigationBar: GigmapBottomBar(
-        currentIndex: _bottomIndex,
-        onItemSelected: (index) {
-          setState(() {
-            _bottomIndex = index;
-          });
-        },
       ),
 
       body: BlocConsumer<ConcertsBloc, ConcertState>(

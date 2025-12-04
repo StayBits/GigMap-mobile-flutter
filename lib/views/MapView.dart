@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../bloc/concerts/ConcertsBloc.dart';
-import '../components/GigmapBottomBar.dart';
 import '../models/ConcertDataModel.dart';
 
 class MapView extends StatefulWidget {
@@ -17,8 +16,6 @@ class _MapViewState extends State<MapView> {
   GoogleMapController? mapController;
   Set<Marker> markers = {};
   ConcertDataModel? selectedConcert;
-  
-  int _bottomIndex = 1; // Mapa seleccionado por defecto
 
   @override
   void initState() {
@@ -89,20 +86,11 @@ class _MapViewState extends State<MapView> {
     return Scaffold(
       extendBody: true,
       backgroundColor: const Color(0xFFF3F3F3),
-      
+
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF5C0F1A)),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.pop(context);
-            } else {
-              Navigator.pushReplacementNamed(context, '/concerts');
-            }
-          },
-        ),
+        automaticallyImplyLeading: false,
         centerTitle: true,
         title: const Text(
           'GigMap',
@@ -117,24 +105,6 @@ class _MapViewState extends State<MapView> {
             child: Icon(Icons.notifications_none, color: Color(0xFF5C0F1A)),
           ),
         ],
-      ),
-
-      bottomNavigationBar: GigmapBottomBar(
-        currentIndex: _bottomIndex,
-        onItemSelected: (index) {
-          setState(() {
-            _bottomIndex = index;
-          });
-          
-          // Navegación según el índice
-          if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/concerts');
-          } else if (index == 2) {
-            // TODO: Navegar a creación de concierto
-          } else if (index == 3) {
-            // TODO: Navegar a configuración
-          }
-        },
       ),
 
       body: BlocConsumer<ConcertsBloc, ConcertState>(
