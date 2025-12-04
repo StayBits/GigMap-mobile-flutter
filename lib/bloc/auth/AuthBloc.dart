@@ -16,103 +16,110 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutEvent>(authLogoutEvent);
   }
 
-  // Verificar si el usuario ya está autenticado al iniciar la app
+
   Future<void> authCheckEvent(
       AuthCheckEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
 
     try {
       bool isAuthenticated = await TokenStorage.isAuthenticated();
-      if (isAuthenticated) {
-        UserDataModel? user = await TokenStorage.getUserData();
-        if (user != null) {
-          emit(AuthAuthenticatedState(user: user));
-        } else {
-          emit(AuthUnauthenticatedState());
-        }
+
+      if (!isAuthenticated) {
+        emit(AuthUnauthenticatedState());
+        return;
+      }
+
+      UserDataModel? user = await TokenStorage.getUserData();
+
+      if (user != null) {
+        emit(AuthAuthenticatedState(user: user));
       } else {
         emit(AuthUnauthenticatedState());
       }
-    } catch (e) {
+    } catch (_) {
       emit(AuthUnauthenticatedState());
     }
   }
 
-  // Manejar login
+
   Future<void> authLoginEvent(
       AuthLoginEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
 
     try {
-      AuthResponse? response = await AuthRepository.login(
+      AuthResponse? res = await AuthRepository.login(
         emailOrUsername: event.emailOrUsername,
         password: event.password,
       );
 
-      if (response != null) {
-        // Guardar datos de autenticación
-        await TokenStorage.saveAuthData(response);
-
-        // Crear objeto UserDataModel
-        UserDataModel user = UserDataModel(
-          id: response.id,
-          email: response.email,
-          username: response.username,
-          isArtist: response.isArtist,
-          role: response.role,
-        );
-
-        emit(AuthAuthenticatedState(user: user));
-        emit(AuthLoginSuccessActionState(message: response.message));
-      } else {
+      if (res == null) {
         emit(AuthUnauthenticatedState());
-        emit(AuthErrorActionState(error: 'Credenciales inválidas'));
+        emit(AuthErrorActionState(error: "Credenciales inválidas"));
+        return;
       }
+
+      await TokenStorage.saveAuthData(res);
+
+
+      final user = UserDataModel(
+        id: res.id,
+        email: res.email,
+        username: res.username,
+        name: "",
+        role: res.role ?? "",
+        image: "",
+        isArtist: res.isArtist,
+      );
+
+      emit(AuthAuthenticatedState(user: user));
+      emit(AuthLoginSuccessActionState(message: res.message));
     } catch (e) {
       emit(AuthUnauthenticatedState());
-      emit(AuthErrorActionState(error: 'Error de conexión'));
+      emit(AuthErrorActionState(error: "Error de conexión"));
     }
   }
 
-  // Manejar registro
+
   Future<void> authRegisterEvent(
       AuthRegisterEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
 
     try {
-      AuthResponse? response = await AuthRepository.register(
+      AuthResponse? res = await AuthRepository.register(
         email: event.email,
         username: event.username,
         password: event.password,
         role: event.role,
       );
 
-      if (response != null) {
-        // Guardar datos de autenticación
-        await TokenStorage.saveAuthData(response);
-
-        // Crear objeto UserDataModel
-        UserDataModel user = UserDataModel(
-          id: response.id,
-          email: response.email,
-          username: response.username,
-          isArtist: response.isArtist,
-          role: response.role,
-        );
-
-        emit(AuthAuthenticatedState(user: user));
-        emit(AuthRegisterSuccessActionState(message: response.message));
-      } else {
+      if (res == null) {
         emit(AuthUnauthenticatedState());
-        emit(AuthErrorActionState(error: 'Error en el registro'));
+        emit(AuthErrorActionState(error: "Error en el registro"));
+        return;
       }
+
+      await TokenStorage.saveAuthData(res);
+
+
+      final user = UserDataModel(
+        id: res.id,
+        email: res.email,
+        username: res.username,
+        name: "",
+        role: res.role ?? "",
+        image: "",
+        isArtist: res.isArtist,
+      );
+
+      emit(AuthAuthenticatedState(user: user));
+      emit(AuthRegisterSuccessActionState(message: res.message));
     } catch (e) {
       emit(AuthUnauthenticatedState());
-      emit(AuthErrorActionState(error: 'Error de conexión'));
+      emit(AuthErrorActionState(error: "Error de conexión"));
     }
   }
 
-  // Manejar logout
+
   Future<void> authLogoutEvent(
       AuthLogoutEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
@@ -120,9 +127,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       await TokenStorage.clearAuthData();
       emit(AuthUnauthenticatedState());
-      emit(AuthLogoutSuccessActionState(message: 'Sesión cerrada exitosamente'));
+      emit(AuthLogoutSuccessActionState(message: "Sesión cerrada exitosamente"));
     } catch (e) {
-      emit(AuthErrorActionState(error: 'Error al cerrar sesión'));
+      emit(AuthErrorActionState(error: "Error al cerrar sesión"));
     }
   }
 }

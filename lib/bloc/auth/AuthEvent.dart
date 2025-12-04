@@ -1,9 +1,9 @@
 part of 'AuthBloc.dart';
 
-// Eventos de autenticación
+
 abstract class AuthEvent {}
 
-// Evento para iniciar login
+
 class AuthLoginEvent extends AuthEvent {
   final String emailOrUsername;
   final String password;
@@ -14,7 +14,6 @@ class AuthLoginEvent extends AuthEvent {
   });
 }
 
-// Evento para iniciar registro
 class AuthRegisterEvent extends AuthEvent {
   final String email;
   final String username;
@@ -29,8 +28,8 @@ class AuthRegisterEvent extends AuthEvent {
   });
 }
 
-// Evento para verificar autenticación inicial
+
 class AuthCheckEvent extends AuthEvent {}
 
-// Evento para logout
+
 class AuthLogoutEvent extends AuthEvent {}

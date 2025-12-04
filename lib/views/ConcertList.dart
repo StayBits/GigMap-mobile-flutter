@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gigmap_mobile_flutter/views/CreateConcertView.dart';
+import 'package:gigmap_mobile_flutter/views/ConcertDetailView.dart';
+
 import '../bloc/concerts/ConcertsBloc.dart';
 import '../models/ConcertDataModel.dart';
 
@@ -14,7 +16,33 @@ class Concertlist extends StatefulWidget {
 class _ConcertlistState extends State<Concertlist> {
   final ConcertsBloc concertsBloc = ConcertsBloc();
 
-  //format date
+  final List<String> _genres = [
+    'ROCK',
+    'POP',
+    'ELECTRONICA',
+    'URBANO',
+    'JAZZ',
+    'INDIE',
+    'CLASICO',
+    'METAL',
+    'FOLK',
+    'COUNTRY',
+    'REGGAE',
+    'BLUES',
+    'ALTERNATIVE',
+    'PUNK',
+    'SOUL',
+    'FUNK',
+    'R_AND_B',
+    'LATIN',
+    'WORLD',
+    'HIP_HOP',
+    'CLASSICAL',
+    'ELECTRONIC',
+    'OTHER'
+  ];
+
+
   String formatConcertDate(String isoDate) {
     try {
       final date = DateTime.parse(isoDate);
@@ -24,14 +52,12 @@ class _ConcertlistState extends State<Concertlist> {
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
       ];
 
-      final day = date.day;
-      final month = months[date.month - 1];
-
-      return "$day de $month";
+      return "${date.day} de ${months[date.month - 1]}";
     } catch (_) {
       return isoDate;
     }
   }
+
   @override
   void initState() {
     super.initState();
@@ -79,33 +105,33 @@ class _ConcertlistState extends State<Concertlist> {
         buildWhen: (previous, current) => current is! ConcertActionState,
         listener: (context, state) {},
         builder: (context, state) {
-          switch (state.runtimeType) {
-            case ConcertFetchingSuccessFullState:
-              final successState = state as ConcertFetchingSuccessFullState;
-              return _buildSuccessList(successState.concerts);
-            default:
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF5C0F1A),
-                ),
-              );
+          if (state is ConcertFetchingSuccessFullState) {
+            return _buildSuccessList(state.concerts);
           }
-        },
 
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const CreateConcertView(),
+          return const Center(
+            child: CircularProgressIndicator(
+              color: Color(0xFF5C0F1A),
             ),
           );
         },
-        backgroundColor: const Color(0xFF5C0F1A),
-
-        child: const Icon(Icons.add, color: Colors.white,),
       ),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final created = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateConcertView()),
+          );
+
+          if (created == true) {
+            concertsBloc.add(ConcertInitialFetchEvent());
+          }
+        },
+        backgroundColor: const Color(0xFF5C0F1A),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
@@ -114,7 +140,7 @@ class _ConcertlistState extends State<Concertlist> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Fila filtros
+          // FILTRO
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: Row(
@@ -122,17 +148,13 @@ class _ConcertlistState extends State<Concertlist> {
                 const Icon(Icons.search, color: Color(0xFF5C0F1A)),
                 const SizedBox(width: 8),
                 const Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(170, 0, 0, 0),
-                      child: Text(
-                        'Filtrar por género',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF5C0F1A),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  child: Text(
+                    'Filtrar por género',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF5C0F1A),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -144,15 +166,12 @@ class _ConcertlistState extends State<Concertlist> {
             ),
           ),
 
-          // lista conciertos
+          // LISTA
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: concerts.length,
-            itemBuilder: (context, index) {
-              final concert = concerts[index];
-              return _buildConcertCard(concert);
-            },
+            itemBuilder: (_, index) => _buildConcertCard(concerts[index]),
           ),
         ],
       ),
@@ -160,51 +179,68 @@ class _ConcertlistState extends State<Concertlist> {
   }
 
   Widget _buildConcertCard(ConcertDataModel concert) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-      child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Image.network(
-                concert.image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    Container(color: Colors.grey.shade300),
+    return GestureDetector(
+      onTap: () {
+        if (concert.id != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: concertsBloc,
+                child: ConcertDetailView(concertId: concert.id!),
               ),
             ),
-            Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    concert.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${formatConcertDate(concert.date)}, ${concert.venue.name}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
+          );
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+        child: Card(
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  concert.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      Container(color: Colors.grey.shade300),
+                ),
               ),
-            ),
-          ],
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      concert.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${formatConcertDate(concert.date)}, '
+                          '${concert.venue.name}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:gigmap_mobile_flutter/views/ConcertList.dart';
+import 'package:gigmap_mobile_flutter/views/HomeView.dart';
 import 'package:gigmap_mobile_flutter/views/LoginView.dart';
 import 'package:gigmap_mobile_flutter/views/RegisterView.dart';
 import 'package:gigmap_mobile_flutter/bloc/auth/AuthBloc.dart';
@@ -15,8 +18,10 @@ class Welcome extends StatelessWidget {
         if (state is AuthAuthenticatedState) {
           Navigator.pushNamedAndRemoveUntil(
             context,
+
             '/home',
             (route) => false,
+
           );
         }
       },
