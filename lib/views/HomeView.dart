@@ -72,14 +72,7 @@ class _HomeViewState extends State<HomeView> {
         ],
       ),
 
-      bottomNavigationBar: GigmapBottomBar(
-        currentIndex: _bottomIndex,
-        onItemSelected: (index) {
-          setState(() {
-            _bottomIndex = index;
-          });
-        },
-      ),
+
 
       body: MultiBlocListener(
         listeners: [
