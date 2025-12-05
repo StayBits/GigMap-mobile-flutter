@@ -71,14 +71,14 @@ class PostRepository {
     required int communityId,
     required int userId,
     required String content,
-    String? image,
+    String? imageUrl,
   }) async {
     try {
       final body = jsonEncode({
         "communityId": communityId,
         "userId": userId,
         "content": content,
-        "image": image,
+        "imageUrl": imageUrl,
       });
 
       final response = await http.post(
@@ -100,31 +100,43 @@ class PostRepository {
 
   // POST: Like a post
 
-  static Future<bool> likePost(int postId) async {
+
+  static Future<bool> likePost(int postId, int userId) async {
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/$postId/like"),
+        Uri.parse("$baseUrl/$postId/like?userId=$userId"),
         headers: await _headers(),
       );
+
+      print("LIKE STATUS: ${response.statusCode}");
+      print("LIKE BODY: ${response.body}");
+
       return response.statusCode == 200;
     } catch (e) {
+      print("LIKE ERROR: $e");
       return false;
     }
   }
 
-  // DELETE: Unlike
 
-  static Future<bool> unlikePost(int postId) async {
+  static Future<bool> unlikePost(int postId, int userId) async {
     try {
       final response = await http.delete(
-        Uri.parse("$baseUrl/$postId/unlike"),
+        Uri.parse("$baseUrl/$postId/unlike?userId=$userId"),
         headers: await _headers(),
       );
+
+      print("UNLIKE STATUS: ${response.statusCode}");
+      print("UNLIKE BODY: ${response.body}");
+
       return response.statusCode == 200;
     } catch (e) {
+      print("UNLIKE ERROR: $e");
       return false;
     }
   }
+
+
 
 
   // GET by like

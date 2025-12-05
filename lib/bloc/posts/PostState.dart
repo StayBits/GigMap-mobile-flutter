@@ -23,15 +23,23 @@ class PostCreatedSuccessState extends PostState {
 // LIKE
 class PostLikeSuccessState extends PostState {
   final int postId;
+  final int userId;
 
-  PostLikeSuccessState({required this.postId});
+  PostLikeSuccessState({
+    required this.postId,
+    required this.userId,
+  });
 }
 
 // UNLIKE
 class PostUnlikeSuccessState extends PostState {
   final int postId;
+  final int userId;
 
-  PostUnlikeSuccessState({required this.postId});
+  PostUnlikeSuccessState({
+    required this.postId,
+    required this.userId,
+  });
 }
 
 // DELETE

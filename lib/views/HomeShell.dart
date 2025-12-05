@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gigmap_mobile_flutter/components/GigmapBottomBar.dart';
+import 'package:gigmap_mobile_flutter/views/CommunitiesListView.dart';
 import 'package:gigmap_mobile_flutter/views/ConcertList.dart';
 import 'package:gigmap_mobile_flutter/views/HomeView.dart';
 import 'package:gigmap_mobile_flutter/views/MapView.dart';
@@ -19,6 +20,7 @@ class _HomeShellState extends State<HomeShell> {
   static const List<Widget> _pages = [
     HomeView(),
     MapView(),
+    CommunitiesListView(),
 
   ];
 

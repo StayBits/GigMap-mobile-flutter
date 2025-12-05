@@ -23,15 +23,24 @@ class CreatePostEvent extends PostEvent {
 // Like
 class LikePostEvent extends PostEvent {
   final int postId;
+  final int userId;
 
-  LikePostEvent({required this.postId});
+  LikePostEvent({
+    required this.postId,
+    required this.userId,
+  });
 }
 
 // Unlike
 class UnlikePostEvent extends PostEvent {
   final int postId;
+  final int userId;
 
-  UnlikePostEvent({required this.postId});
+  UnlikePostEvent({
+    required this.postId,
+    required this.userId,
+
+  });
 }
 
 // Delete
