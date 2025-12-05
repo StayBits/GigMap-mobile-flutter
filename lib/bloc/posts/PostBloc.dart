@@ -34,7 +34,7 @@ class PostBloc extends Bloc<PostEvent, PostState> {
       communityId: event.communityId,
       userId: event.userId,
       content: event.content,
-      imageUrl: event.image,
+      image: event.image,
     );
 
     if (newPost != null) {
@@ -43,37 +43,28 @@ class PostBloc extends Bloc<PostEvent, PostState> {
       emit(PostErrorState(message: "Error al crear el post."));
     }
   }
+
   Future<void> likePostEvent(
       LikePostEvent event, Emitter<PostState> emit) async {
-
-    bool ok = await PostRepository.likePost(event.postId, event.userId);
+    bool ok = await PostRepository.likePost(event.postId);
 
     if (ok) {
-      emit(PostLikeSuccessState(
-        postId: event.postId,
-        userId: event.userId,
-      ));
+      emit(PostLikeSuccessState(postId: event.postId));
     } else {
       emit(PostErrorState(message: "Error al hacer like."));
     }
   }
 
-
   Future<void> unlikePostEvent(
       UnlikePostEvent event, Emitter<PostState> emit) async {
-
-    bool ok = await PostRepository.unlikePost(event.postId, event.userId);
+    bool ok = await PostRepository.unlikePost(event.postId);
 
     if (ok) {
-      emit(PostUnlikeSuccessState(
-        postId: event.postId,
-        userId: event.userId,
-      ));
+      emit(PostUnlikeSuccessState(postId: event.postId));
     } else {
       emit(PostErrorState(message: "Error al quitar like."));
     }
   }
-
 
 
   Future<void> deletePostEvent(
