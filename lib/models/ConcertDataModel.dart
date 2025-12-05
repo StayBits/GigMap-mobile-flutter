@@ -9,6 +9,7 @@ class ConcertDataModel {
   String description;
   String image;
   String genre;
+  int userId;
 
   PlatformDataModel platform;
   VenueDataModel venue;
@@ -26,6 +27,7 @@ class ConcertDataModel {
     required this.platform,
     required this.venue,
     required this.attendees,
+    required this.userId
   });
 
   static ConcertDataModel objJson(Map<String, dynamic> json) {
@@ -37,7 +39,7 @@ class ConcertDataModel {
       description: json['description'] as String,
       image: json['image'] as String,
       genre: json['genre'] as String,
-
+      userId: json["userId"] ?? 0,
       platform: PlatformDataModel.objJson(json['platform']),
       venue: VenueDataModel.objJson(json['venue']),
 
