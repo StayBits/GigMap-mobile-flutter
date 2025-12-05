@@ -15,11 +15,13 @@ class PostBloc extends Bloc<PostEvent, PostState> {
     on<UnlikePostEvent>(unlikePostEvent);
     on<DeletePostEvent>(deletePostEvent);
     on<UpdatePostEvent>(updatePostEvent);
+    on<FetchLikedPostsEvent>(fetchLikedPostsEvent);
   }
 
-
   Future<void> fetchPostsEvent(
-      FetchPostsEvent event, Emitter<PostState> emit) async {
+    FetchPostsEvent event,
+    Emitter<PostState> emit,
+  ) async {
     emit(PostLoadingState());
 
     List<PostDataModel> posts = await PostRepository.fetchPosts();
@@ -27,7 +29,9 @@ class PostBloc extends Bloc<PostEvent, PostState> {
   }
 
   Future<void> createPostEvent(
-      CreatePostEvent event, Emitter<PostState> emit) async {
+    CreatePostEvent event,
+    Emitter<PostState> emit,
+  ) async {
     emit(PostLoadingState());
 
     PostDataModel? newPost = await PostRepository.createPost(
@@ -43,41 +47,37 @@ class PostBloc extends Bloc<PostEvent, PostState> {
       emit(PostErrorState(message: "Error al crear el post."));
     }
   }
-  Future<void> likePostEvent(
-      LikePostEvent event, Emitter<PostState> emit) async {
 
+  Future<void> likePostEvent(
+    LikePostEvent event,
+    Emitter<PostState> emit,
+  ) async {
     bool ok = await PostRepository.likePost(event.postId, event.userId);
 
     if (ok) {
-      emit(PostLikeSuccessState(
-        postId: event.postId,
-        userId: event.userId,
-      ));
+      emit(PostLikeSuccessState(postId: event.postId, userId: event.userId));
     } else {
       emit(PostErrorState(message: "Error al hacer like."));
     }
   }
 
-
   Future<void> unlikePostEvent(
-      UnlikePostEvent event, Emitter<PostState> emit) async {
-
+    UnlikePostEvent event,
+    Emitter<PostState> emit,
+  ) async {
     bool ok = await PostRepository.unlikePost(event.postId, event.userId);
 
     if (ok) {
-      emit(PostUnlikeSuccessState(
-        postId: event.postId,
-        userId: event.userId,
-      ));
+      emit(PostUnlikeSuccessState(postId: event.postId, userId: event.userId));
     } else {
       emit(PostErrorState(message: "Error al quitar like."));
     }
   }
 
-
-
   Future<void> deletePostEvent(
-      DeletePostEvent event, Emitter<PostState> emit) async {
+    DeletePostEvent event,
+    Emitter<PostState> emit,
+  ) async {
     bool ok = await PostRepository.deletePost(event.postId);
 
     if (ok) {
@@ -88,7 +88,9 @@ class PostBloc extends Bloc<PostEvent, PostState> {
   }
 
   Future<void> updatePostEvent(
-      UpdatePostEvent event, Emitter<PostState> emit) async {
+    UpdatePostEvent event,
+    Emitter<PostState> emit,
+  ) async {
     emit(PostLoadingState());
 
     PostDataModel? updated = await PostRepository.updatePost(
@@ -101,6 +103,24 @@ class PostBloc extends Bloc<PostEvent, PostState> {
       emit(PostUpdatedSuccessState(post: updated));
     } else {
       emit(PostErrorState(message: "Error al actualizar el post."));
+    }
+  }
+
+  Future<void> fetchLikedPostsEvent(
+    FetchLikedPostsEvent event,
+    Emitter<PostState> emit,
+  ) async {
+    emit(PostLoadingState());
+    print('[Bloc] FetchLikedPostsEvent userId: ${event.userId}');
+    try {
+      List<PostDataModel> posts = await PostRepository.fetchPostsLikedByUser(
+        event.userId,
+      );
+      print('[Bloc] Posts recibidos: ${posts.length}');
+      emit(PostLikedFetchSuccessState(posts: posts));
+    } catch (e) {
+      print('[Bloc] Error: $e');
+      emit(PostErrorState(message: "Error al obtener los posts con like."));
     }
   }
 }

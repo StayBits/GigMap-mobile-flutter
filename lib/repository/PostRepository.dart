@@ -45,7 +45,6 @@ class PostRepository {
     return posts;
   }
 
-
   // GET: Get post by ID
 
   static Future<PostDataModel?> fetchPostById(int postId) async {
@@ -63,7 +62,6 @@ class PostRepository {
       return null;
     }
   }
-
 
   // POST: Create a post
 
@@ -97,9 +95,7 @@ class PostRepository {
     }
   }
 
-
   // POST: Like a post
-
 
   static Future<bool> likePost(int postId, int userId) async {
     try {
@@ -118,7 +114,6 @@ class PostRepository {
     }
   }
 
-
   static Future<bool> unlikePost(int postId, int userId) async {
     try {
       final response = await http.delete(
@@ -136,31 +131,23 @@ class PostRepository {
     }
   }
 
-
-
-
   // GET by like
   static Future<List<PostDataModel>> fetchPostsLikedByUser(int userId) async {
     List<PostDataModel> posts = [];
-
     try {
       final response = await http.get(
         Uri.parse("$baseUrl/liked_by/$userId"),
         headers: await _headers(),
       );
-
       List result = jsonDecode(response.body);
-
       for (var item in result) {
         posts.add(PostDataModel.fromJson(item));
       }
     } catch (e) {
       return [];
     }
-
     return posts;
   }
-
 
   // PUT
   static Future<PostDataModel?> updatePost({
@@ -169,10 +156,7 @@ class PostRepository {
     String? image,
   }) async {
     try {
-      final body = jsonEncode({
-        "content": content,
-        "image": image,
-      });
+      final body = jsonEncode({"content": content, "image": image});
 
       final response = await http.put(
         Uri.parse("$baseUrl/$postId"),

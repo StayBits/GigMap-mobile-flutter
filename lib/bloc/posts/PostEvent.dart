@@ -25,10 +25,7 @@ class LikePostEvent extends PostEvent {
   final int postId;
   final int userId;
 
-  LikePostEvent({
-    required this.postId,
-    required this.userId,
-  });
+  LikePostEvent({required this.postId, required this.userId});
 }
 
 // Unlike
@@ -36,11 +33,7 @@ class UnlikePostEvent extends PostEvent {
   final int postId;
   final int userId;
 
-  UnlikePostEvent({
-    required this.postId,
-    required this.userId,
-
-  });
+  UnlikePostEvent({required this.postId, required this.userId});
 }
 
 // Delete
@@ -56,9 +49,11 @@ class UpdatePostEvent extends PostEvent {
   final String content;
   final String? image;
 
-  UpdatePostEvent({
-    required this.postId,
-    required this.content,
-    this.image,
-  });
+  UpdatePostEvent({required this.postId, required this.content, this.image});
+}
+
+class FetchLikedPostsEvent extends PostEvent {
+  final int userId;
+
+  FetchLikedPostsEvent({required this.userId});
 }

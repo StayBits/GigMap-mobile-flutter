@@ -25,10 +25,7 @@ class PostLikeSuccessState extends PostState {
   final int postId;
   final int userId;
 
-  PostLikeSuccessState({
-    required this.postId,
-    required this.userId,
-  });
+  PostLikeSuccessState({required this.postId, required this.userId});
 }
 
 // UNLIKE
@@ -36,10 +33,7 @@ class PostUnlikeSuccessState extends PostState {
   final int postId;
   final int userId;
 
-  PostUnlikeSuccessState({
-    required this.postId,
-    required this.userId,
-  });
+  PostUnlikeSuccessState({required this.postId, required this.userId});
 }
 
 // DELETE
@@ -61,4 +55,10 @@ class PostErrorState extends PostState {
   final String message;
 
   PostErrorState({required this.message});
+}
+
+class PostLikedFetchSuccessState extends PostState {
+  final List<PostDataModel> posts;
+
+  PostLikedFetchSuccessState({required this.posts});
 }

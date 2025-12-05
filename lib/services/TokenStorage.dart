@@ -12,7 +12,6 @@ class TokenStorage {
   static const String _userImageKey = 'user_image';
   static const String _userNameKey = 'user_name';
 
-
   static Future<void> saveAuthData(AuthResponse authResponse) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -23,9 +22,7 @@ class TokenStorage {
 
     // role puede ser null en register → prevenir errores
     await prefs.setString(_userRoleKey, authResponse.role ?? "");
-
   }
-
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -58,7 +55,6 @@ class TokenStorage {
     );
   }
 
-
   static Future<bool> isAuthenticated() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
@@ -67,5 +63,10 @@ class TokenStorage {
   static Future<void> clearAuthData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+  }
+
+  static Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_userIdKey);
   }
 }
