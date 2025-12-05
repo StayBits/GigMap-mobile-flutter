@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gigmap_mobile_flutter/views/ConcertList.dart';
-
-import '../components/GigmapBottomBar.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../bloc/concerts/ConcertsBloc.dart';
 import '../bloc/users/UsersBloc.dart';
 import '../bloc/posts/PostBloc.dart';
+import '../bloc/m1au/M1AUBloc.dart';
 
 import '../models/UserDataModel.dart';
 import '../models/PostDataModel.dart';
 import '../models/ConcertDataModel.dart';
+import 'ConcertDetailView.dart';
+import 'M1AUChatModal.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -23,8 +25,10 @@ class _HomeViewState extends State<HomeView> {
   final ConcertsBloc concertsBloc = ConcertsBloc();
   final UsersBloc usersBloc = UsersBloc();
   final PostBloc postBloc = PostBloc();
+  final M1AUBloc m1auBloc = M1AUBloc();
 
   int _bottomIndex = 0;
+  bool _isChatOpen = false;
 
   List<UserDataModel> _allUsers = [];
 
@@ -41,173 +45,223 @@ class _HomeViewState extends State<HomeView> {
     concertsBloc.close();
     usersBloc.close();
     postBloc.close();
+    m1auBloc.close();
     super.dispose();
+  }
+
+
+  void _toggleChat() {
+    setState(() {
+      _isChatOpen = !_isChatOpen;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: const Color(0xFFF3F3F3),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-
-        centerTitle: true,
-        title: const Text(
-          'GigMap',
-          style: TextStyle(
-            color: Color(0xFF5C0F1A),
-            fontWeight: FontWeight.bold,
+    return BlocProvider<M1AUBloc>(
+      create: (_) => m1auBloc,
+      child: Scaffold(
+        extendBody: true,
+        backgroundColor: const Color(0xFFF3F3F3),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            'GigMap',
+            style: TextStyle(
+              color: Color(0xFF5C0F1A),
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 16.0),
+              child: Icon(Icons.notifications_none, color: Color(0xFF5C0F1A)),
+            ),
+          ],
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.notifications_none, color: Color(0xFF5C0F1A)),
-          ),
-        ],
-      ),
 
 
+        body: Stack(
+          children: [
 
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<UsersBloc, UsersState>(
-            bloc: usersBloc,
-            listener: (context, state) {
-              if (state is UsersFetchingSuccessState) {
-                setState(() => _allUsers = state.users);
-              }
-            },
-          ),
-        ],
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 120),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            MultiBlocListener(
+              listeners: [
+                BlocListener<UsersBloc, UsersState>(
+                  bloc: usersBloc,
+                  listener: (context, state) {
+                    if (state is UsersFetchingSuccessState) {
+                      setState(() => _allUsers = state.users);
+                    }
+                  },
+                ),
+              ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 120),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Descubre nuevos conciertos",
-                      style: TextStyle(
-                        color: Color(0xFF5C0F1A),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 18,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Descubre nuevos conciertos",
+                            style: TextStyle(
+                              color: Color(0xFF5C0F1A),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_forward,
+                              color: Color(0xFF5C0F1A),
+                              size: 22,
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const Concertlist(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
 
-
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_forward,
-                        color: Color(0xFF5C0F1A),
-                        size: 22,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const Concertlist(),
+                    BlocBuilder<ConcertsBloc, ConcertState>(
+                      bloc: concertsBloc,
+                      builder: (context, state) {
+                        if (state is ConcertFetchingSuccessFullState) {
+                          return _buildConcertCarousel(state.concerts);
+                        }
+                        return const SizedBox(
+                          height: 180,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF5C0F1A),
+                            ),
                           ),
                         );
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    const Padding(
+                      padding: EdgeInsets.only(left: 20, bottom: 10),
+                      child: Text(
+                        "Nuevos artistas en GigMap",
+                        style: TextStyle(
+                          color: Color(0xFF5C0F1A),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+
+                    BlocBuilder<UsersBloc, UsersState>(
+                      bloc: usersBloc,
+                      builder: (context, state) {
+                        if (state is UsersFetchingSuccessState) {
+                          final artists = state.users.where((u) {
+                            final r = (u.role ?? '').toUpperCase();
+                            return r == "ARTIST" || u.isArtist == true;
+                          }).toList();
+
+                          if (artists.isEmpty) {
+                            return _emptyBox("No hay artistas aún");
+                          }
+
+                          return _buildArtistCarousel(artists);
+                        }
+
+                        return _emptyBox("Cargando artistas...");
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    BlocBuilder<PostBloc, PostState>(
+                      bloc: postBloc,
+                      builder: (context, state) {
+                        if (state is PostFetchSuccessState) {
+                          if (state.posts.isEmpty) {
+                            return _emptyBox("No hay publicaciones aún");
+                          }
+
+                          final userMap = {
+                            for (final u in _allUsers) u.id: u,
+                          };
+
+                          return Column(
+                            children: state.posts
+                                .map((p) => _buildPostCard(p, userMap[p.userId]))
+                                .toList(),
+                          );
+                        }
+
+                        return _emptyBox("Cargando publicaciones...");
                       },
                     ),
                   ],
                 ),
               ),
+            ),
 
-              BlocBuilder<ConcertsBloc, ConcertState>(
-                bloc: concertsBloc,
-                builder: (context, state) {
-                  if (state is ConcertFetchingSuccessFullState) {
-                    return _buildConcertCarousel(state.concerts);
-                  }
-                  return const SizedBox(
-                    height: 180,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF5C0F1A),
+            //  MODAL M1AU
+            if (_isChatOpen)
+              M1AUChatModal(
+                onClose: _toggleChat,
+                onNavigateToArtist: (artistId) {
+                  _toggleChat();
+
+                },
+                onNavigateToConcert: (concertId) {
+                  _toggleChat();
+                  // 2. Navegar a ConcertDetailView, igual que tu onTap original
+                  print('🎵 Card clickeado desde M1AU! Concert ID: $concertId');
+                final parsedId = int.tryParse(concertId);
+                if (parsedId == null) {
+                  debugPrint('❌ concertId inválido: $concertId');
+                  return;
+                }
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => BlocProvider.value(
+                              value: concertsBloc, // 👈 reutilizas el mismo bloc
+                              child: ConcertDetailView(
+                                  concertId: parsedId,
+                              ),
+                          ),
                       ),
-                    ),
                   );
                 },
               ),
+          ],
+        ),
 
-              const SizedBox(height: 20),
 
-
-              // Sección Artistas
-
-              const Padding(
-                padding: EdgeInsets.only(left: 20, bottom: 10),
-                child: Text(
-                  "Nuevos artistas en GigMap",
-                  style: TextStyle(
-                    color: Color(0xFF5C0F1A),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-
-              BlocBuilder<UsersBloc, UsersState>(
-                bloc: usersBloc,
-                builder: (context, state) {
-                  if (state is UsersFetchingSuccessState) {
-                    final artists = state.users.where((u) {
-                      final r = (u.role ?? '').toUpperCase();
-                      return r == "ARTIST" || u.isArtist == true;
-                    }).toList();
-
-                    if (artists.isEmpty) {
-                      return _emptyBox("No hay artistas aún");
-                    }
-
-                    return _buildArtistCarousel(artists);
-                  }
-
-                  return _emptyBox("Cargando artistas...");
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              BlocBuilder<PostBloc, PostState>(
-                bloc: postBloc,
-                builder: (context, state) {
-                  if (state is PostFetchSuccessState) {
-                    if (state.posts.isEmpty) {
-                      return _emptyBox("No hay publicaciones aún");
-                    }
-
-                    final userMap = {
-                      for (final u in _allUsers) u.id: u,
-                    };
-
-                    return Column(
-                      children: state.posts
-                          .map((p) => _buildPostCard(p, userMap[p.userId]))
-                          .toList(),
-                    );
-                  }
-
-                  return _emptyBox("Cargando publicaciones...");
-                },
-              ),
-            ],
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 70),
+        child:FloatingActionButton(
+          onPressed: _toggleChat,
+          backgroundColor: const Color(0xFF5C0F1A),
+          child: Icon(
+            _isChatOpen ? FontAwesomeIcons.cat : Icons.catching_pokemon,
+            color: Colors.white,
           ),
+        ),
         ),
       ),
     );
   }
-
 
   Widget _buildConcertCarousel(List<ConcertDataModel> concerts) {
     return SizedBox(
@@ -325,7 +379,6 @@ class _HomeViewState extends State<HomeView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Row(
               children: [
                 Container(

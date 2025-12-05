@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../bloc/concerts/ConcertsBloc.dart';
 import '../models/ConcertDataModel.dart';
-import 'ConcertDetailView.dart'; // ← AÑADE ESTE IMPORT
+import 'ConcertDetailView.dart';
 
 class MapView extends StatefulWidget {
   final int? selectedConcertId;
@@ -275,7 +275,7 @@ class _MapViewState extends State<MapView> {
 
           // Navegar a ConcertDetailView
           if (concert.id != null) {
-            print('✅ Navegando a ConcertDetailView con ID: ${concert.id}');
+            print(' Navegando a ConcertDetailView con ID: ${concert.id}');
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -286,7 +286,7 @@ class _MapViewState extends State<MapView> {
               ),
             );
           } else {
-            print('❌ Concert ID es null, no se puede navegar');
+            print('Concert ID es null, no se puede navegar');
           }
         },
         child: Container(
