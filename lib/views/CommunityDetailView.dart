@@ -35,11 +35,10 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
   int? _currentUserId;
   List<UserDataModel> _allUsers = [];
 
-  // 👇 overrides locales para UI
   final Map<int, bool> _localLikedByPostId = {};
   final Map<int, int> _localLikesCount = {};
 
-  bool _hasMembershipChanged = false; // 👈 NUEVO
+  bool _hasMembershipChanged = false;
 
   @override
   void initState() {
@@ -78,9 +77,8 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
 
     return WillPopScope(
       onWillPop: () async {
-        // cuando el usuario use el botón "atrás" del sistema
         Navigator.pop(context, _hasMembershipChanged);
-        return false; // evitamos que Flutter haga el pop por defecto
+        return false;
       },
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -90,7 +88,6 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF5C0F1A)),
             onPressed: () {
-              // cuando toque la flecha del AppBar
               Navigator.pop(context, _hasMembershipChanged);
             },
           ),
@@ -201,7 +198,6 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
             ),
           ),
 
-          // Texto + botón Unirse/Salir
           Align(
             alignment: Alignment.center,
             child: Padding(
@@ -262,7 +258,7 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
                               if (ok) {
                                 setState(() {
                                   community.members.remove(userId);
-                                  _hasMembershipChanged = true; // 👈 IMPORTANTE
+                                  _hasMembershipChanged = true;
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -286,7 +282,7 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
                               if (ok) {
                                 setState(() {
                                   community.members.add(userId);
-                                  _hasMembershipChanged = true; // 👈 IMPORTANTE
+                                  _hasMembershipChanged = true;
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -382,24 +378,26 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
 
         final posts = state.posts;
 
+
         final Map<int, UserDataModel> userMap = {
           for (final u in _allUsers) u.id: u,
         };
 
-        final int? artistId =
-        community.members.isNotEmpty ? community.members.first : null;
 
-        final artistPosts = posts.where((p) {
-          if (artistId == null) return false;
-          return p.communityId == community.id && p.userId == artistId;
+        final communityPosts = posts.where((p) => p.communityId == community.id);
+
+
+        final artistPosts = communityPosts.where((p) {
+          final user = userMap[p.userId];
+          return user?.role == "ARTIST";
         }).toList();
 
-        final fanPosts = posts.where((p) {
-          if (artistId == null) {
-            return p.communityId == community.id;
-          }
-          return p.communityId == community.id && p.userId != artistId;
+
+        final fanPosts = communityPosts.where((p) {
+          final user = userMap[p.userId];
+          return user?.role == "FAN";
         }).toList();
+
 
         return TabBarView(
           children: [
@@ -450,15 +448,12 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
 
 
   Widget _buildPostCard(PostDataModel post, UserDataModel? user) {
-    // id del usuario logueado
     final int? currentUserId = _currentUserId;
 
-    // --- estado base desde backend (protegido por null) ---
     final int backendLikesCount = post.likes?.length ?? 0;
     final bool backendIsLiked = currentUserId != null &&
         (post.likes?.contains(currentUserId) ?? false);
 
-    // --- estado efectivo (backend + overrides locales) ---
     final bool isLiked = _localLikedByPostId[post.id] ?? backendIsLiked;
     final int likesCount = _localLikesCount[post.id] ?? backendLikesCount;
 
@@ -470,7 +465,6 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabecera con avatar + nombre
             Row(
               children: [
                 Container(
@@ -504,7 +498,6 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
 
             const SizedBox(height: 10),
 
-            // Contenido
             if (post.content.isNotEmpty) ...[
               Text(
                 post.content,
@@ -527,7 +520,6 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
 
             const SizedBox(height: 8),
 
-            // --- fila de likes ---
             Row(
               children: [
                 Text(
@@ -543,7 +535,6 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
                     color: isLiked ? Colors.red : const Color(0xFF2A2A2A),
                   ),
                   onPressed: () async {
-                    // validamos user logueado
                     if (currentUserId == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -571,7 +562,6 @@ class _CommunityDetailViewState extends State<CommunityDetailView> {
                       return;
                     }
 
-                    // Actualizamos UI localmente
                     setState(() {
                       _localLikedByPostId[post.id] = !isLiked;
                       final baseCount =
