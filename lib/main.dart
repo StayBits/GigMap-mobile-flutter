@@ -35,11 +35,22 @@ class MyApp extends StatelessWidget {
                 settings: settings,
               );
             case '/home':
-              final initialIndex = (settings.arguments is int)
-                  ? settings.arguments as int
-                  : 0;
+              final args = settings.arguments;
+              int initialIndex = 0;
+              int? selectedConcertId;
+
+              if (args is Map<String, dynamic>) {
+                initialIndex = args['initialIndex'] ?? 0;
+                selectedConcertId = args['selectedConcertId'];
+              } else if (args is int) {
+                initialIndex = args;
+              }
+
               return MaterialPageRoute(
-                builder: (_) => HomeShell(initialIndex: initialIndex),
+                builder: (_) => HomeShell(
+                  initialIndex: initialIndex,
+                  selectedConcertId: selectedConcertId,
+                ),
                 settings: settings,
               );
           }
