@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gigmap_mobile_flutter/views/HomeShell.dart';
 import 'package:gigmap_mobile_flutter/views/Welcome.dart';
-import 'package:gigmap_mobile_flutter/views/ProfileView.dart';
 import 'package:gigmap_mobile_flutter/bloc/auth/AuthBloc.dart';
 
 void main() {
@@ -50,19 +49,6 @@ class MyApp extends StatelessWidget {
                   initialIndex: initialIndex,
                   selectedConcertId: selectedConcertId,
                 ),
-                settings: settings,
-              );
-
-            case '/editProfile':
-              return MaterialPageRoute(
-                builder: (_) => const Text(
-                  'Edit Profile View',
-                ), // TODO: Replace with actual EditProfileView
-                settings: settings,
-              );
-            case '/profile':
-              return MaterialPageRoute(
-                builder: (_) => const ProfileView(),
                 settings: settings,
               );
           }

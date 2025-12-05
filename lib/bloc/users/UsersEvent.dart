@@ -22,6 +22,8 @@ class UpdateUserEvent extends UsersEvent {
   final String username;
   final bool isArtist;
   final String? role;
+  final String name;
+  final String image;
 
   UpdateUserEvent({
     required this.userId,
@@ -29,5 +31,7 @@ class UpdateUserEvent extends UsersEvent {
     required this.username,
     required this.isArtist,
     this.role,
+    required this.name,
+    required this.image
   });
 }

@@ -51,3 +51,8 @@ class RemoveAttendeeEvent extends ConcertsEvent {
   final int userId;
   RemoveAttendeeEvent(this.concertId, this.userId);
 }
+
+class FetchAttendedConcertsByUserEvent extends ConcertsEvent {
+  final int userId;
+  FetchAttendedConcertsByUserEvent({required this.userId});
+}

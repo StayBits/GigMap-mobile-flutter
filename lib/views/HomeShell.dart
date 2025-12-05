@@ -44,16 +44,15 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       extendBody: true,
       backgroundColor: const Color(0xFFF3F3F3),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: GigmapBottomBar(
-        currentIndex: _currentIndex,
-        onItemSelected: (i) {
-          setState(() => _currentIndex = i);
-        },
-      ),
+      body: IndexedStack(index: _currentIndex, children: pages),
+      bottomNavigationBar: (_currentIndex == 3 && widget.profileUserId != null)
+          ? null
+          : GigmapBottomBar(
+              currentIndex: _currentIndex,
+              onItemSelected: (i) {
+                setState(() => _currentIndex = i);
+              },
+            ),
     );
   }
 }

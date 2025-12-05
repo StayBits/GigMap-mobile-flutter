@@ -91,6 +91,8 @@ class UserRepository {
     required String email,
     required String username,
     required bool isArtist,
+    required String name,
+    required String image,
     String? role,
   }) async {
     try {

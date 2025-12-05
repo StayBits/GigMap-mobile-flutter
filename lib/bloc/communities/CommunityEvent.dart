@@ -2,9 +2,7 @@ part of 'CommunityBloc.dart';
 
 abstract class CommunityEvent {}
 
-
 class FetchCommunitiesEvent extends CommunityEvent {}
-
 
 class FetchUserCommunitiesEvent extends CommunityEvent {
   final int userId;
@@ -12,13 +10,11 @@ class FetchUserCommunitiesEvent extends CommunityEvent {
   FetchUserCommunitiesEvent({required this.userId});
 }
 
-
 class FetchCommunityByIdEvent extends CommunityEvent {
   final int communityId;
 
   FetchCommunityByIdEvent({required this.communityId});
 }
-
 
 class CreateCommunityEvent extends CommunityEvent {
   final String name;
@@ -31,7 +27,6 @@ class CreateCommunityEvent extends CommunityEvent {
     required this.image,
   });
 }
-
 
 class UpdateCommunityEvent extends CommunityEvent {
   final int id;
@@ -47,31 +42,22 @@ class UpdateCommunityEvent extends CommunityEvent {
   });
 }
 
-
 class DeleteCommunityEvent extends CommunityEvent {
   final int id;
 
   DeleteCommunityEvent({required this.id});
 }
 
-
 class JoinCommunityEvent extends CommunityEvent {
   final int communityId;
   final int userId;
 
-  JoinCommunityEvent({
-    required this.communityId,
-    required this.userId,
-  });
+  JoinCommunityEvent({required this.communityId, required this.userId});
 }
-
 
 class LeaveCommunityEvent extends CommunityEvent {
   final int communityId;
   final int userId;
 
-  LeaveCommunityEvent({
-    required this.communityId,
-    required this.userId,
-  });
+  LeaveCommunityEvent({required this.communityId, required this.userId});
 }

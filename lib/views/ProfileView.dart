@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:gigmap_mobile_flutter/bloc/auth/AuthBloc.dart';
+import 'package:gigmap_mobile_flutter/bloc/communities/CommunityBloc.dart';
+import 'package:gigmap_mobile_flutter/components/GigmapAppBar.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/users/UsersBloc.dart';
-import '../bloc/concerts/ConcertsBloc.dart';
-import '../bloc/posts/PostBloc.dart';
-import '../services/TokenStorage.dart';
-import '../models/UserDataModel.dart';
+import 'package:gigmap_mobile_flutter/bloc/users/UsersBloc.dart';
+import 'package:gigmap_mobile_flutter/bloc/concerts/ConcertsBloc.dart';
+import 'package:gigmap_mobile_flutter/bloc/posts/PostBloc.dart';
+import 'package:gigmap_mobile_flutter/models/UserDataModel.dart';
+import 'package:gigmap_mobile_flutter/services/TokenStorage.dart';
+import 'package:gigmap_mobile_flutter/views/edit_profile_view.dart';
 
 class ProfileView extends StatefulWidget {
   final int? userId;
@@ -16,23 +20,27 @@ class ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<ProfileView> {
-  late final UsersBloc usersBloc;
-  late final ConcertsBloc concertsBloc;
-  late final PostBloc postBloc;
+  // Local blocs so this view can fetch its data independently
+  late UsersBloc _usersBloc;
+  late ConcertsBloc _concertsBloc;
+  late PostBloc _postBloc;
+  late CommunityBloc _communityBloc;
+  late int _selectedTab;
 
   UserDataModel? user;
   bool isOwner = false;
   bool isArtist = false;
   int? _targetUserId;
+  bool showArrowBack = false;
 
   @override
   void initState() {
     super.initState();
-
-    usersBloc = UsersBloc();
-    concertsBloc = ConcertsBloc();
-    postBloc = PostBloc();
-
+    _selectedTab = 0;
+    _usersBloc = UsersBloc();
+    _concertsBloc = ConcertsBloc();
+    _postBloc = PostBloc();
+    _communityBloc = CommunityBloc();
     _initData();
   }
 
@@ -41,6 +49,7 @@ class _ProfileViewState extends State<ProfileView> {
       _targetUserId = widget.userId;
       final currentId = await TokenStorage.getUserId();
       isOwner = (currentId == _targetUserId);
+      showArrowBack = true;
     } else {
       final currentId = await TokenStorage.getUserId();
       _targetUserId = currentId;
@@ -48,9 +57,12 @@ class _ProfileViewState extends State<ProfileView> {
     }
 
     if (_targetUserId != null) {
-      usersBloc.add(FetchUserByIdEvent(userId: _targetUserId!));
-      concertsBloc.add(ConcertInitialFetchEvent());
-      postBloc.add(FetchLikedPostsEvent(userId: _targetUserId!));
+      _usersBloc.add(FetchUserByIdEvent(userId: _targetUserId!));
+      _concertsBloc.add(
+        FetchAttendedConcertsByUserEvent(userId: _targetUserId!),
+      );
+      _communityBloc.add(FetchUserCommunitiesEvent(userId: _targetUserId!));
+      _postBloc.add(FetchLikedPostsEvent(userId: _targetUserId!));
     }
 
     setState(() {});
@@ -58,177 +70,459 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   void dispose() {
-    usersBloc.close();
-    concertsBloc.close();
-    postBloc.close();
+    _usersBloc.close();
+    _concertsBloc.close();
+    _postBloc.close();
+    _communityBloc.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_targetUserId == null) {
-      return const Scaffold(
-
-        body: Center(child: Text("No se pudo obtener el usuario actual")),
-      );
-    }
-
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider.value(value: usersBloc),
-        BlocProvider.value(value: concertsBloc),
-        BlocProvider.value(value: postBloc),
-      ],
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF3F3F3),
-
-        appBar: AppBar(
-          title: const Text("Perfil"),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          automaticallyImplyLeading: true,
-          leading: const BackButton(color: Colors.black),
-        ),
-
-        body: Container(
-
-          child: BlocBuilder<UsersBloc, UsersState>(
-            builder: (_, state) {
-              if (state is UserByIdSuccessState) {
-                user = state.user;
-                isArtist = user!.isArtist;
-                return _buildProfile(user!);
-              }
-
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF5C0F1A)),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfile(UserDataModel u) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 55,
-            backgroundImage: NetworkImage(u.image),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            u.name.isNotEmpty ? u.name : "@${u.username}",
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Text("@${u.username}", style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 20),
-
-          if (isOwner)
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5C0F1A),
-              ),
-              child: const Text("Editar perfil"),
-            )
-          else
-            OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF5C0F1A)),
-              ),
-              child: const Text("Seguir"),
-            ),
-
-          const SizedBox(height: 20),
-          _buildTabs(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabs() {
-    final tabs = isArtist ? ["Conciertos", "Likes"] : ["GigList", "Likes"];
+    final List<String> tabOptions = isArtist
+        ? ["Conciertos", "Comunidades", "Likes"]
+        : ["GigList", "Comunidades", "Likes"];
 
     return DefaultTabController(
-      length: tabs.length,
-      child: Column(
-        children: [
-          TabBar(
-            labelColor: const Color(0xFF5C0F1A),
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: const Color(0xFF5C0F1A),
-            tabs: tabs.map((e) => Tab(text: e)).toList(),
-          ),
+      length: tabOptions.length,
+      initialIndex: _selectedTab,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<UsersBloc>.value(value: _usersBloc),
+          BlocProvider<ConcertsBloc>.value(value: _concertsBloc),
+          BlocProvider<PostBloc>.value(value: _postBloc),
+          BlocProvider<CommunityBloc>.value(value: _communityBloc),
+        ],
+        child: BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthLogoutSuccessActionState) {
+              Navigator.pushReplacementNamed(context, "/welcome");
+            }
+          },
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            appBar: GigMapAppBar(
+              context: context,
+              showBackButton: showArrowBack,
+              title: "Perfil",
+            ),
+            body: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Row below the custom AppBar that shows the title and a trailing action
+                    if (isOwner)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            GestureDetector(
+                              onTap: () => context.read<AuthBloc>().add(
+                                AuthLogoutEvent(),
+                              ),
+                              child: const Icon(
+                                Icons.logout,
+                                color: Color(0xFF5C0F1A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-          SizedBox(
-            height: 400,
-            child: TabBarView(
-              children: [
-                _concertsTab(),
-                _likesTab(),
-              ],
+                    const SizedBox(height: 8.0),
+
+                    // HEADER: UsersBloc to render real data when available
+                    BlocBuilder<UsersBloc, UsersState>(
+                      builder: (context, usersState) {
+                        if (usersState is UserByIdSuccessState) {
+                          final user = usersState.user;
+
+                          return Column(
+                            children: [
+                              CircleAvatar(
+                                radius: 55,
+                                backgroundColor: const Color(0xFFEDEDED),
+                                backgroundImage: user.image.isNotEmpty
+                                    ? NetworkImage(user.image)
+                                    : null,
+                                child: user.image.isEmpty
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 55,
+                                        color: Colors.grey,
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(height: 12.0),
+                              Text(
+                                user.name,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontSize: 20.0,
+                                      color: Colors.black,
+                                    ),
+                              ),
+                              Text(
+                                "@${user.username}",
+                                style: const TextStyle(
+                                  fontSize: 14.0,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 12.0),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (isOwner) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => BlocProvider.value(
+                                          value: context.read<UsersBloc>(),
+                                          child: EditProfileView(user: user),
+                                        ),
+                                      ),
+                                    ).then((updated) {
+                                      if (updated == true) {
+                                        _usersBloc.add(
+                                          FetchUserByIdEvent(userId: user.id),
+                                        );
+                                      }
+                                    });
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF5C0F1A),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                ),
+                                child: Text(
+                                  isOwner ? "Editar perfil" : "Seguir",
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                    ),
+
+                    const SizedBox(height: 24.0),
+
+                    // TABS
+                    TabBar(
+                      indicatorColor: const Color(0xFF5C0F1A),
+                      labelColor: const Color(0xFF5C0F1A),
+                      unselectedLabelColor: Colors.grey,
+                      onTap: (index) {
+                        setState(() {
+                          _selectedTab = index;
+                        });
+                      },
+                      tabs: tabOptions
+                          .map((title) => Tab(text: title))
+                          .toList(),
+                    ),
+
+                    const SizedBox(height: 12.0),
+
+                    // CONTENT: use ConcertsBloc + PostBloc to populate lists when available
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.415,
+                      child: TabBarView(
+                        children: [
+                          // Tab 0: Conciertos (ARTIST) / GigList (FAN)
+                          BlocBuilder<ConcertsBloc, ConcertState>(
+                            builder: (context, concertState) {
+                              List concerts = [];
+                              if (concertState
+                                  is ConcertFetchingSuccessFullState) {
+                                concerts = concertState.concerts;
+                              }
+
+                              if (concerts.isEmpty) {
+                                return const Center(
+                                  child: Text(
+                                    "No hay conciertos",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                );
+                              }
+
+                              return ListView.separated(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                itemCount: concerts.length,
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(height: 12.0),
+                                itemBuilder: (context, index) {
+                                  final concert = concerts[index];
+                                  return Card(
+                                    elevation: 4.0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16.0),
+                                    ),
+                                    color: Colors.white,
+                                    child: InkWell(
+                                      onTap: () {},
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(16.0),
+                                                ),
+                                            child: Image.network(
+                                              concert.image ?? '',
+                                              height: 160.0,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => Container(
+                                                    height: 160.0,
+                                                    color: Colors.grey[300],
+                                                    child: const Icon(
+                                                      Icons.broken_image,
+                                                      size: 50,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(12.0),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  concert.name ?? 'Concierto',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF5C0F1A),
+                                                    fontSize: 16.0,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4.0),
+                                                Text(
+                                                  concert.venue?.name ?? '',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF736D6D),
+                                                    fontSize: 14.0,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2.0),
+                                                Text(
+                                                  ((concert.date ?? '')
+                                                                  .toString()
+                                                                  .length >=
+                                                              10
+                                                          ? (concert.date ?? '')
+                                                                .toString()
+                                                                .substring(
+                                                                  0,
+                                                                  10,
+                                                                )
+                                                          : (concert.date ?? '')
+                                                                .toString())
+                                                      .replaceAll('-', '/'),
+                                                  style: const TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 13.0,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+
+                          // Tab 1: Comunidades (static placeholder until community bloc exists)
+                          BlocBuilder<CommunityBloc, CommunityState>(
+                            builder: (context, communityState) {
+                              List communities = [];
+                              if (communityState is CommunityListSuccessState) {
+                                communities = communityState.communities;
+                              }
+
+                              if (communities.isEmpty) {
+                                return const Center(
+                                  child: Text(
+                                    "No hay comunidades",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                );
+                              }
+
+                              return ListView.separated(
+                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                itemCount: communities.length,
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final community = communities[index];
+
+                                  return Card(
+                                    elevation: 3,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Imagen
+                                        ClipRRect(
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(20),
+                                            topRight: Radius.circular(20),
+                                          ),
+                                          child: Image.network(
+                                            community.image,
+                                            height: 150,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Container(
+                                                  height: 150,
+                                                  color: Colors.grey.shade300,
+                                                  child: const Center(
+                                                    child: Icon(
+                                                      Icons.broken_image,
+                                                    ),
+                                                  ),
+                                                ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                community.name.toUpperCase(),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                community.description,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey.shade700,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+
+                          // Tab 2: Likes (use PostBloc if available)
+                          BlocBuilder<PostBloc, PostState>(
+                            builder: (context, postState) {
+                              List posts = [];
+                              if (postState is PostLikedFetchSuccessState) {
+                                posts = postState.posts;
+                              }
+
+                              if (posts.isEmpty) {
+                                return const Center(
+                                  child: Text(
+                                    "No hay publicaciones en Likes",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                );
+                              }
+
+                              return ListView.separated(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                itemCount: posts.length,
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(height: 12.0),
+                                itemBuilder: (context, index) {
+                                  final post = posts[index];
+                                  return Card(
+                                    elevation: 2.0,
+                                    margin: EdgeInsets.zero,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const CircleAvatar(
+                                                radius: 20,
+                                                backgroundImage: NetworkImage(
+                                                  '',
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                post.userId?.toString() ??
+                                                    'Anónimo',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(post.content ?? ''),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ],
+        ),
       ),
-    );
-  }
-
-  Widget _concertsTab() {
-    return BlocBuilder<ConcertsBloc, ConcertState>(
-      builder: (_, state) {
-        if (state is ConcertFetchingSuccessFullState) {
-          final concerts = state.concerts;
-
-          final myConcerts = concerts.toList();
-
-          if (myConcerts.isEmpty) {
-            return const Center(child: Text("No hay conciertos"));
-          }
-
-          return ListView.builder(
-            itemCount: myConcerts.length,
-            itemBuilder: (_, i) {
-              final c = myConcerts[i];
-              return ListTile(
-                leading: CircleAvatar(backgroundImage: NetworkImage(c.image)),
-                title: Text(c.name),
-                subtitle: Text(c.venue.name),
-              );
-            },
-          );
-        }
-
-        return const Center(child: CircularProgressIndicator());
-      },
-    );
-  }
-
-  Widget _likesTab() {
-    return BlocBuilder<PostBloc, PostState>(
-      builder: (_, state) {
-        if (state is PostLikedFetchSuccessState) {
-          if (state.posts.isEmpty) {
-            return const Center(child: Text("No hay likes aún"));
-          }
-
-          return ListView.builder(
-            itemCount: state.posts.length,
-            itemBuilder: (_, i) {
-              final p = state.posts[i];
-              return ListTile(title: Text(p.content));
-            },
-          );
-        }
-
-        return const Center(child: CircularProgressIndicator());
-      },
     );
   }
 }

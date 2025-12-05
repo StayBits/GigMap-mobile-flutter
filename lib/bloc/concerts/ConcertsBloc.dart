@@ -18,6 +18,7 @@ class ConcertsBloc extends Bloc<ConcertsEvent, ConcertState> {
     on<DeleteConcertEvent>(_deleteConcert);
     on<AddAttendeeEvent>(_addAttendee);
     on<RemoveAttendeeEvent>(_removeAttendee);
+    on<FetchAttendedConcertsByUserEvent>(_fetchAttendedConcertsByUser);
   }
 
   Future<void> _fetchAll(event, emit) async {
@@ -64,8 +65,10 @@ class ConcertsBloc extends Bloc<ConcertsEvent, ConcertState> {
 
   Future<void> _updateConcert(UpdateConcertEvent event, emit) async {
     emit(ConcertActionState());
-    final concert =
-    await ConcertRepository.updateConcert(event.concertId, event.data);
+    final concert = await ConcertRepository.updateConcert(
+      event.concertId,
+      event.data,
+    );
     concert != null
         ? emit(ConcertUpdatedSuccessState(concert: concert))
         : emit(ConcertsErrorState(message: "No se pudo actualizar"));
@@ -81,7 +84,10 @@ class ConcertsBloc extends Bloc<ConcertsEvent, ConcertState> {
 
   Future<void> _addAttendee(AddAttendeeEvent event, emit) async {
     emit(ConcertActionState());
-    final ok = await ConcertRepository.addAttendee(event.concertId, event.userId);
+    final ok = await ConcertRepository.addAttendee(
+      event.concertId,
+      event.userId,
+    );
     ok
         ? emit(AttendeeAddedSuccessState())
         : emit(ConcertsErrorState(message: "Error agregando asistente"));
@@ -89,10 +95,21 @@ class ConcertsBloc extends Bloc<ConcertsEvent, ConcertState> {
 
   Future<void> _removeAttendee(RemoveAttendeeEvent event, emit) async {
     emit(ConcertActionState());
-    final ok =
-    await ConcertRepository.removeAttendee(event.concertId, event.userId);
+    final ok = await ConcertRepository.removeAttendee(
+      event.concertId,
+      event.userId,
+    );
     ok
         ? emit(AttendeeRemovedSuccessState())
         : emit(ConcertsErrorState(message: "Error quitando asistente"));
+  }
+
+  Future<void> _fetchAttendedConcertsByUser(
+    FetchAttendedConcertsByUserEvent event,
+    emit,
+  ) async {
+    emit(ConcertActionState());
+    final concerts = await ConcertRepository.fetchByUser(event.userId);
+    emit(ConcertFetchingSuccessFullState(concerts: concerts));
   }
 }

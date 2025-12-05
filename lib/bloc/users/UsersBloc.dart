@@ -73,6 +73,8 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
       username: event.username,
       isArtist: event.isArtist,
       role: event.role,
+      name: event.name,
+      image: event.image,
     );
 
     if (updated != null) {
