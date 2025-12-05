@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:gigmap_mobile_flutter/components/GigmapBottomBar.dart';
+
 import 'package:gigmap_mobile_flutter/views/CommunitiesListView.dart';
 import 'package:gigmap_mobile_flutter/views/ConcertList.dart';
+
 import 'package:gigmap_mobile_flutter/views/HomeView.dart';
 import 'package:gigmap_mobile_flutter/views/MapView.dart';
+import 'package:gigmap_mobile_flutter/views/ProfileView.dart';
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key, this.initialIndex = 0});
+  const HomeShell({super.key, this.initialIndex = 0, this.selectedConcertId});
 
   final int initialIndex;
+  final int? selectedConcertId;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -17,6 +21,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   late int _currentIndex;
 
+
   static const List<Widget> _pages = [
     HomeView(),
     MapView(),
@@ -24,10 +29,19 @@ class _HomeShellState extends State<HomeShell> {
 
   ];
 
+  late final List<Widget> _pages;
+
+
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex.clamp(0, _pages.length - 1);
+    _currentIndex = widget.initialIndex.clamp(0, 2);
+
+    _pages = [
+      const HomeView(),
+      MapView(selectedConcertId: widget.selectedConcertId),
+      const ProfileView(),
+    ];
   }
 
   void _handleNavigationTap(int index) {
@@ -54,5 +68,3 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 }
-
-
