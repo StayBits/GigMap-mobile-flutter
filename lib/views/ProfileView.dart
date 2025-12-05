@@ -35,9 +35,6 @@ class _ProfileViewState extends State<ProfileView> {
   bool isArtist = false;
   bool showArrowBack = false;
 
-  // CACHE para evitar pedir info del mismo usuario muchas veces
-  final Map<int, UserDataModel> _userCache = {};
-
   @override
   void initState() {
     super.initState();
@@ -65,11 +62,9 @@ class _ProfileViewState extends State<ProfileView> {
 
     if (_targetUserId != null) {
       _usersBloc.add(FetchUserByIdEvent(userId: _targetUserId!));
-      _concertsBloc.add(
-        FetchAttendedConcertsByUserEvent(userId: _targetUserId!),
-      );
+      _concertsBloc.add(FetchConcertsByArtistEvent(_targetUserId!));
       _communityBloc.add(FetchUserCommunitiesEvent(userId: _targetUserId!));
-      _postBloc.add(FetchLikedPostsEvent(userId: _targetUserId!));
+      _postBloc.add(FetchPostsEvent());
     }
 
     setState(() {});
@@ -84,77 +79,11 @@ class _ProfileViewState extends State<ProfileView> {
     super.dispose();
   }
 
-  Future<UserDataModel?> _fetchPostUser(int userId) async {
-    if (_userCache.containsKey(userId)) return _userCache[userId];
-
-    final completer = Completer<UserDataModel?>();
-
-    late final StreamSubscription sub;
-    sub = _usersBloc.stream.listen((state) {
-      if (state is UserByIdSuccessState && state.user.id == userId) {
-        _userCache[userId] = state.user;
-        completer.complete(state.user);
-        sub.cancel();
-      }
-      if (state is UsersErrorState) {
-        completer.complete(null);
-        sub.cancel();
-      }
-    });
-
-    _usersBloc.add(FetchUserByIdEvent(userId: userId));
-    return completer.future;
-  }
-
-  Widget _postCard(dynamic post) {
-    return FutureBuilder<UserDataModel?>(
-      future: _fetchPostUser(post.userId ?? 0),
-      builder: (context, snapshot) {
-        final author = snapshot.data;
-
-        return Card(
-          elevation: 2,
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.grey.shade300,
-                      backgroundImage:
-                          (author != null && author.image.isNotEmpty)
-                          ? NetworkImage(author.image)
-                          : null,
-                      child: (author == null || author.image.isEmpty)
-                          ? Icon(Icons.person, color: Colors.grey)
-                          : null,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      author != null ? "@${author.username}" : "Cargando...",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(post.content ?? ""),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     List<String> tabs = isArtist
-        ? ["Conciertos", "Comunidades", "Likes"]
-        : ["GigList", "Comunidades", "Likes"];
+        ? ["Conciertos", "Comunidades", "Posts"]
+        : ["GigList", "Comunidades", "Posts"];
 
     return DefaultTabController(
       length: tabs.length,
@@ -202,16 +131,17 @@ class _ProfileViewState extends State<ProfileView> {
                     BlocBuilder<UsersBloc, UsersState>(
                       builder: (context, usersState) {
                         if (usersState is UserByIdSuccessState) {
-                          final user = usersState.user;
+                          user = usersState.user;
+
                           return Column(
                             children: [
                               CircleAvatar(
                                 radius: 55,
                                 backgroundColor: const Color(0xFFEDEDED),
-                                backgroundImage: user.image.isNotEmpty
-                                    ? NetworkImage(user.image)
+                                backgroundImage: user!.image.isNotEmpty
+                                    ? NetworkImage(user!.image)
                                     : null,
-                                child: user.image.isEmpty
+                                child: user!.image.isEmpty
                                     ? const Icon(
                                         Icons.person,
                                         size: 55,
@@ -221,7 +151,7 @@ class _ProfileViewState extends State<ProfileView> {
                               ),
                               const SizedBox(height: 12.0),
                               Text(
-                                user.name,
+                                user!.name,
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(
                                       fontSize: 20.0,
@@ -229,7 +159,7 @@ class _ProfileViewState extends State<ProfileView> {
                                     ),
                               ),
                               Text(
-                                "@${user.username}",
+                                "@${user!.username}",
                                 style: const TextStyle(
                                   fontSize: 14.0,
                                   color: Colors.grey,
@@ -244,13 +174,13 @@ class _ProfileViewState extends State<ProfileView> {
                                       MaterialPageRoute(
                                         builder: (_) => BlocProvider.value(
                                           value: context.read<UsersBloc>(),
-                                          child: EditProfileView(user: user),
+                                          child: EditProfileView(user: user!),
                                         ),
                                       ),
                                     ).then((updated) {
                                       if (updated == true) {
                                         _usersBloc.add(
-                                          FetchUserByIdEvent(userId: user.id),
+                                          FetchUserByIdEvent(userId: user!.id),
                                         );
                                       }
                                     });
@@ -278,16 +208,16 @@ class _ProfileViewState extends State<ProfileView> {
                                   });
                                 },
                                 tabs:
-                                    (user.isArtist
+                                    (user!.isArtist
                                             ? [
                                                 "Conciertos",
                                                 "Comunidades",
-                                                "Likes",
+                                                "Posts",
                                               ]
                                             : [
                                                 "GigList",
                                                 "Comunidades",
-                                                "Likes",
+                                                "Posts",
                                               ])
                                         .map((title) => Tab(text: title))
                                         .toList(),
@@ -515,14 +445,63 @@ class _ProfileViewState extends State<ProfileView> {
                           // TAB 3 - Likes (CON FETCH USER)
                           BlocBuilder<PostBloc, PostState>(
                             builder: (_, state) {
-                              if (state is PostLikedFetchSuccessState &&
+                              if (user == null) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              if (state is PostFetchSuccessState &&
                                   state.posts.isNotEmpty) {
+                                final filteredPosts = state.posts
+                                    .where((post) => post.userId == user!.id)
+                                    .toList();
+
                                 return ListView.separated(
-                                  itemCount: state.posts.length,
+                                  itemCount: filteredPosts.length,
                                   separatorBuilder: (_, __) =>
                                       SizedBox(height: 12),
-                                  itemBuilder: (_, i) =>
-                                      _postCard(state.posts[i]),
+                                  itemBuilder: (_, i) => Card(
+                                    elevation: 2,
+                                    margin: EdgeInsets.zero,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 20,
+                                                backgroundColor:
+                                                    Colors.grey.shade300,
+                                                backgroundImage:
+                                                    user!.image.isNotEmpty
+                                                    ? NetworkImage(user!.image)
+                                                    : null,
+                                                child: (user!.image.isEmpty)
+                                                    ? Icon(
+                                                        Icons.person,
+                                                        color: Colors.grey,
+                                                      )
+                                                    : null,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                "@${user!.username}",
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(filteredPosts[i].content),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 );
                               }
                               return const Center(
