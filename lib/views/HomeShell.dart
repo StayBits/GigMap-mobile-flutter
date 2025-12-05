@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gigmap_mobile_flutter/components/GigmapBottomBar.dart';
-
-import 'package:gigmap_mobile_flutter/views/CommunitiesListView.dart';
-import 'package:gigmap_mobile_flutter/views/ConcertList.dart';
-
 import 'package:gigmap_mobile_flutter/views/HomeView.dart';
 import 'package:gigmap_mobile_flutter/views/MapView.dart';
 import 'package:gigmap_mobile_flutter/views/ProfileView.dart';
+
+import 'CommunitiesListView.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, this.initialIndex = 0, this.selectedConcertId});
@@ -21,16 +19,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   late int _currentIndex;
 
-
-  static const List<Widget> _pages = [
-    HomeView(),
-    MapView(),
-    CommunitiesListView(),
-
-  ];
-
   late final List<Widget> _pages;
-
 
   @override
   void initState() {
@@ -40,6 +29,7 @@ class _HomeShellState extends State<HomeShell> {
     _pages = [
       const HomeView(),
       MapView(selectedConcertId: widget.selectedConcertId),
+      CommunitiesListView(),
       const ProfileView(),
     ];
   }
