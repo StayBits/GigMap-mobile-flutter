@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gigmap_mobile_flutter/bloc/auth/AuthBloc.dart';
 import 'package:gigmap_mobile_flutter/bloc/communities/CommunityBloc.dart';
@@ -20,27 +22,32 @@ class ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<ProfileView> {
-  // Local blocs so this view can fetch its data independently
   late UsersBloc _usersBloc;
   late ConcertsBloc _concertsBloc;
   late PostBloc _postBloc;
   late CommunityBloc _communityBloc;
+
   late int _selectedTab;
+  int? _targetUserId;
 
   UserDataModel? user;
   bool isOwner = false;
   bool isArtist = false;
-  int? _targetUserId;
   bool showArrowBack = false;
+
+  // CACHE para evitar pedir info del mismo usuario muchas veces
+  final Map<int, UserDataModel> _userCache = {};
 
   @override
   void initState() {
     super.initState();
     _selectedTab = 0;
+
     _usersBloc = UsersBloc();
     _concertsBloc = ConcertsBloc();
     _postBloc = PostBloc();
     _communityBloc = CommunityBloc();
+
     _initData();
   }
 
@@ -77,14 +84,80 @@ class _ProfileViewState extends State<ProfileView> {
     super.dispose();
   }
 
+  Future<UserDataModel?> _fetchPostUser(int userId) async {
+    if (_userCache.containsKey(userId)) return _userCache[userId];
+
+    final completer = Completer<UserDataModel?>();
+
+    late final StreamSubscription sub;
+    sub = _usersBloc.stream.listen((state) {
+      if (state is UserByIdSuccessState && state.user.id == userId) {
+        _userCache[userId] = state.user;
+        completer.complete(state.user);
+        sub.cancel();
+      }
+      if (state is UsersErrorState) {
+        completer.complete(null);
+        sub.cancel();
+      }
+    });
+
+    _usersBloc.add(FetchUserByIdEvent(userId: userId));
+    return completer.future;
+  }
+
+  Widget _postCard(dynamic post) {
+    return FutureBuilder<UserDataModel?>(
+      future: _fetchPostUser(post.userId ?? 0),
+      builder: (context, snapshot) {
+        final author = snapshot.data;
+
+        return Card(
+          elevation: 2,
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.grey.shade300,
+                      backgroundImage:
+                          (author != null && author.image.isNotEmpty)
+                          ? NetworkImage(author.image)
+                          : null,
+                      child: (author == null || author.image.isEmpty)
+                          ? Icon(Icons.person, color: Colors.grey)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      author != null ? "@${author.username}" : "Cargando...",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(post.content ?? ""),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<String> tabOptions = isArtist
+    List<String> tabs = isArtist
         ? ["Conciertos", "Comunidades", "Likes"]
         : ["GigList", "Comunidades", "Likes"];
 
     return DefaultTabController(
-      length: tabOptions.length,
+      length: tabs.length,
       initialIndex: _selectedTab,
       child: MultiBlocProvider(
         providers: [
@@ -110,36 +183,26 @@ class _ProfileViewState extends State<ProfileView> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Row below the custom AppBar that shows the title and a trailing action
                     if (isOwner)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            GestureDetector(
-                              onTap: () => context.read<AuthBloc>().add(
-                                AuthLogoutEvent(),
-                              ),
-                              child: const Icon(
-                                Icons.logout,
-                                color: Color(0xFF5C0F1A),
-                              ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          GestureDetector(
+                            onTap: () =>
+                                context.read<AuthBloc>().add(AuthLogoutEvent()),
+                            child: const Icon(
+                              Icons.logout,
+                              color: Color(0xFF5C0F1A),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-
                     const SizedBox(height: 8.0),
-
-                    // HEADER: UsersBloc to render real data when available
                     BlocBuilder<UsersBloc, UsersState>(
                       builder: (context, usersState) {
                         if (usersState is UserByIdSuccessState) {
                           final user = usersState.user;
-
                           return Column(
                             children: [
                               CircleAvatar(
@@ -204,39 +267,44 @@ class _ProfileViewState extends State<ProfileView> {
                                   style: const TextStyle(color: Colors.white),
                                 ),
                               ),
+                              const SizedBox(height: 24.0),
+                              TabBar(
+                                indicatorColor: const Color(0xFF5C0F1A),
+                                labelColor: const Color(0xFF5C0F1A),
+                                unselectedLabelColor: Colors.grey,
+                                onTap: (index) {
+                                  setState(() {
+                                    _selectedTab = index;
+                                  });
+                                },
+                                tabs:
+                                    (user.isArtist
+                                            ? [
+                                                "Conciertos",
+                                                "Comunidades",
+                                                "Likes",
+                                              ]
+                                            : [
+                                                "GigList",
+                                                "Comunidades",
+                                                "Likes",
+                                              ])
+                                        .map((title) => Tab(text: title))
+                                        .toList(),
+                              ),
                             ],
                           );
                         }
-
                         return const Center(child: CircularProgressIndicator());
                       },
                     ),
-
-                    const SizedBox(height: 24.0),
-
-                    // TABS
-                    TabBar(
-                      indicatorColor: const Color(0xFF5C0F1A),
-                      labelColor: const Color(0xFF5C0F1A),
-                      unselectedLabelColor: Colors.grey,
-                      onTap: (index) {
-                        setState(() {
-                          _selectedTab = index;
-                        });
-                      },
-                      tabs: tabOptions
-                          .map((title) => Tab(text: title))
-                          .toList(),
-                    ),
-
                     const SizedBox(height: 12.0),
-
-                    // CONTENT: use ConcertsBloc + PostBloc to populate lists when available
+                    // -------- TAB CONTENT --------
                     SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.415,
+                      height: MediaQuery.of(context).size.height * 0.43,
                       child: TabBarView(
                         children: [
-                          // Tab 0: Conciertos (ARTIST) / GigList (FAN)
+                          // TAB 1 - Conciertos o GigList
                           BlocBuilder<ConcertsBloc, ConcertState>(
                             builder: (context, concertState) {
                               List concerts = [];
@@ -244,7 +312,6 @@ class _ProfileViewState extends State<ProfileView> {
                                   is ConcertFetchingSuccessFullState) {
                                 concerts = concertState.concerts;
                               }
-
                               if (concerts.isEmpty) {
                                 return const Center(
                                   child: Text(
@@ -253,7 +320,6 @@ class _ProfileViewState extends State<ProfileView> {
                                   ),
                                 );
                               }
-
                               return ListView.separated(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8.0,
@@ -355,14 +421,13 @@ class _ProfileViewState extends State<ProfileView> {
                             },
                           ),
 
-                          // Tab 1: Comunidades (static placeholder until community bloc exists)
+                          // TAB 2 - Comunidades
                           BlocBuilder<CommunityBloc, CommunityState>(
                             builder: (context, communityState) {
                               List communities = [];
                               if (communityState is CommunityListSuccessState) {
                                 communities = communityState.communities;
                               }
-
                               if (communities.isEmpty) {
                                 return const Center(
                                   child: Text(
@@ -371,7 +436,6 @@ class _ProfileViewState extends State<ProfileView> {
                                   ),
                                 );
                               }
-
                               return ListView.separated(
                                 padding: EdgeInsets.symmetric(vertical: 8.0),
                                 itemCount: communities.length,
@@ -379,7 +443,6 @@ class _ProfileViewState extends State<ProfileView> {
                                     SizedBox(height: 12),
                                 itemBuilder: (context, index) {
                                   final community = communities[index];
-
                                   return Card(
                                     elevation: 3,
                                     shape: RoundedRectangleBorder(
@@ -390,7 +453,6 @@ class _ProfileViewState extends State<ProfileView> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        // Imagen
                                         ClipRRect(
                                           borderRadius: const BorderRadius.only(
                                             topLeft: Radius.circular(20),
@@ -450,66 +512,21 @@ class _ProfileViewState extends State<ProfileView> {
                             },
                           ),
 
-                          // Tab 2: Likes (use PostBloc if available)
+                          // TAB 3 - Likes (CON FETCH USER)
                           BlocBuilder<PostBloc, PostState>(
-                            builder: (context, postState) {
-                              List posts = [];
-                              if (postState is PostLikedFetchSuccessState) {
-                                posts = postState.posts;
-                              }
-
-                              if (posts.isEmpty) {
-                                return const Center(
-                                  child: Text(
-                                    "No hay publicaciones en Likes",
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
+                            builder: (_, state) {
+                              if (state is PostLikedFetchSuccessState &&
+                                  state.posts.isNotEmpty) {
+                                return ListView.separated(
+                                  itemCount: state.posts.length,
+                                  separatorBuilder: (_, __) =>
+                                      SizedBox(height: 12),
+                                  itemBuilder: (_, i) =>
+                                      _postCard(state.posts[i]),
                                 );
                               }
-
-                              return ListView.separated(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                ),
-                                itemCount: posts.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 12.0),
-                                itemBuilder: (context, index) {
-                                  final post = posts[index];
-                                  return Card(
-                                    elevation: 2.0,
-                                    margin: EdgeInsets.zero,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              const CircleAvatar(
-                                                radius: 20,
-                                                backgroundImage: NetworkImage(
-                                                  '',
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                post.userId?.toString() ??
-                                                    'Anónimo',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(post.content ?? ''),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
+                              return const Center(
+                                child: Text("No hay publicaciones"),
                               );
                             },
                           ),
